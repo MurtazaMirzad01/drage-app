@@ -1,20 +1,122 @@
-import { Form } from "react-router";
+import { Form, useFetcher, useLoaderData } from "react-router";
+import { useState } from "react";
 export default function AppView() {
+  const fetcher = useFetcher();
+  const loaderData = useLoaderData();
+  console.log("Loader Data:", loaderData);
+  const [name, setName] = useState("");
+  const [value, setValue] = useState("");
+  const [products, setProducts] = useState([]);
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    fetcher.submit(
+      {
+        name,
+        value,
+        product: JSON.stringify(products),
+
+      },
+      { method: "post" }
+    );
+
+    console.log("Form submitted");
+    setName("");
+    setValue("");
+    setProducts([]);
+  }
+
+
+  function handleDiscard() {
+    console.log("Form reset");
+  }
+  async function handleProductBrowse() {
+    const selected = await shopify.resourcePicker({
+      multiple: true,
+      type: "product"
+    });
+
+    console.log("-----------------------");
+    console.log(selected);
+    console.log("-----------------------");
+
+    setProducts(prevProducts => {
+      const existingIds = new Set(prevProducts.map(p => p.id));
+      const newProducts = selected.filter(
+        product => !existingIds.has(product.id)
+      );
+      return [...prevProducts, ...newProducts];
+    });
+  }
+  function handleRemoveProductFromCard(productId) {
+    setProducts(prevProducts =>
+      prevProducts.filter(product => product.id !== productId)
+    );
+  }
+
   return (
     <s-page heading="Dashboard">
       <s-section>
         <s-heading>Enter product Details</s-heading>
         <Form
           data-save-bar
-        // onSubmit={handleSubmit}  // Changed from string to function
-        // onReset={handleDiscard}  // Changed from string to function
+          onSubmit={handleSubmit}  // Changed from string to function
+          onReset={handleDiscard}  // Changed from string to function
         >
-          <s-stack direction="inline" gap="base" justifyContent="space-between">
-            <s-text-field label="Name" />
-            <s-text-field label="Value" />
-          </s-stack>
-          <s-button >Browse</s-button>
+          <s-stack gap="base">
+            <s-query-container>
+              <s-grid gridTemplateColumns="@container (inline-size > 500px) 1fr 1fr, 1fr" gap="base">
+                <s-grid-item>
+                  <s-text-field
+                    label="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />                </s-grid-item>
+                <s-grid-item>
+                  <s-text-field
+                    label="Value"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                  />                </s-grid-item>
+              </s-grid>
+            </s-query-container>
+            <s-stack gap="base" direction="inline" align="center">
+              <s-text>Please select a product: </s-text>
+              <s-button onClick={handleProductBrowse} >Browse</s-button>
+            </s-stack>
+            {products.length > 0 && (
+              <s-stack
+                gap="small-300"
+                padding="small-300"
+              >
+                {products.map((product) => (
+                  <s-stack key={product.id} direction="inline" gap="base" border="base" borderStyle="dotted" padding="small-300" justifyContent="space-between">
+                    <s-stack direction="inline" gap="base" >
+                      <s-box inlineSize="50px" blockSize="50px">
+                        <s-image
+                          src={product.images?.[0]?.originalSrc || ''}
+                          alt={product.title}
+                          aspectRatio="1/0.5"
+                        />
+                      </s-box>
+                      <s-box>
+                        <s-text>{product.title}</s-text>
+                        <s-paragraph>{product.publishedAt}</s-paragraph>
+                      </s-box>
+                    </s-stack>
+                    <s-stack>
+                      <s-icon
+                        type="x"
+                        onClick={() => handleRemoveProductFromCard(product.id)}
+                      >
+                      </s-icon>
+                    </s-stack>
+                  </s-stack>
+                ))}
+              </s-stack>
+            )}
 
+          </s-stack>
         </Form>
 
       </s-section>
