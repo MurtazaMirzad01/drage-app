@@ -15,7 +15,7 @@ export default function AppView() {
         name,
         value,
         product: JSON.stringify(products),
-
+        metaobjectId: loaderData.metaobjectId
       },
       { method: "post" }
     );

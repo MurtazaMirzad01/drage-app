@@ -5,14 +5,16 @@ import { getMetaobjectDefinition, createMetaobjectDefinition, createMetaobject, 
 import { createMetafieldDefinition, getMetafieldDefinitions, setMetafields } from "../services/metafield.gq.js";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
   const { admin } = await authenticate.admin(request);
+
   // 1️⃣ Check if metaobject definition exists
   const definitionResponse = await getMetaobjectDefinition({ admin });
   let metaobjectDefinition = definitionResponse?.data?.metaobjectDefinitionByType;
 
-  // 2️⃣ If definition does not exist, create it
-  if (!metaobjectDefinition) {
+  if (metaobjectDefinition) {
+    console.log("Metaobject exists:", metaobjectDefinition);
+  } else {
+    console.log("Metaobject does not exist. Creating one...");
     const createdDefinitionResponse = await createMetaobjectDefinition({ admin });
     metaobjectDefinition = createdDefinitionResponse?.metaobjectDefinitionCreate?.metaobjectDefinition;
 
@@ -21,71 +23,56 @@ export const loader = async ({ request }) => {
       return null;
     }
   }
-  return null;
+
+  // ✅ Get the metaobject ID
+  const metaobjectId = metaobjectDefinition?.id;
+  console.log("Metaobject ID:", metaobjectId);
+
+  // Return whatever you need, e.g., the ID
+  return { metaobjectId };
 };
+
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
+  const formData = await request.formData();
 
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-  };
+  const name = formData.get("name");
+  const value = formData.get("value");
+  const products = JSON.parse(formData.get("product"));
+  const metaobjectId = formData.get("metaobjectId");
+
+  console.log("Action received data:", { name, value, products, metaobjectId });
+
+  // Create the metaobject
+  const createdMetaobjectResponse = await createMetaobject(
+    { admin },
+    { name, value, data: { products } }
+  );
+
+  const createdMetaobject = createdMetaobjectResponse?.metaobjectCreate?.metaobject;
+
+  if (!createdMetaobject) {
+    console.error("Failed to create metaobject");
+    return null;
+  }
+
+  console.log("Created Metaobject:", createdMetaobject);
+
+  // Set metafields for each product
+  for (const product of products) {
+    const setMetafieldResponse = await setMetafields(
+      { admin },
+      product.id,
+      createdMetaobject.id
+    );
+
+    console.log(
+      `Set metafield for product ${product.id}:`,
+      setMetafieldResponse
+    );
+  }
+
+  return null;
 };
 
 export default function Index() {
