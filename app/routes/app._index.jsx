@@ -7,38 +7,26 @@ import { createMetafieldDefinition, getMetafieldDefinitions, setMetafields } fro
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
-  // 1️⃣ Check if metaobject definition exists
-  const definitionResponse = await getMetaobjectDefinition({ admin });
-  let metaobjectDefinition = definitionResponse?.data?.metaobjectDefinitionByType;
-
-  if (metaobjectDefinition) {
-    console.log("Metaobject exists:", metaobjectDefinition);
-  } else {
-    console.log("Metaobject does not exist. Creating one...");
-    const createdDefinitionResponse = await createMetaobjectDefinition({ admin });
-    metaobjectDefinition = createdDefinitionResponse?.metaobjectDefinitionCreate?.metaobjectDefinition;
-
-    if (!metaobjectDefinition) {
-      console.error("Failed to create metaobject definition");
-      return null;
+  const {
+    data: { metaobjectDefinition },
+  } = await getMetaobjectDefinition({ admin });
+  if (!metaobjectDefinition) {
+    const {
+      data: { metaobjectDefinitionCreate: { metaobjectDefinition }, },
+    } = await createMetaobjectDefinition({ admin });
+    if (metaobjectDefinition) {
+      await createMetafieldDefinition({ admin, metaobjectDefinitionId: metaobjectDefinition.id });
+      await createMetafieldDefinition({ admin, metaobjectDefinitionId: metaobjectDefinition.id, ownerType: "PRODUCT" });
     }
   }
-
-  // ✅ Get the metaobject ID
-  const metaobjectId = metaobjectDefinition?.id;
-  console.log("Metaobject ID:", metaobjectId);
-
-  // Return whatever you need, e.g., the ID
-  return { metaobjectId };
 };
-
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
 
   const name = formData.get("name");
   const value = formData.get("value");
-  const products = JSON.parse(formData.get("product"));
+  const products = (formData.get("product"));
   const metaobjectId = formData.get("metaobjectId");
 
   console.log("Action received data:", { name, value, products, metaobjectId });
