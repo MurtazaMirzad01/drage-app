@@ -1,9 +1,5 @@
 import { authenticate } from "../shopify.server";
 import ViewTable from "../components/ViewTable.jsx";
-
-// =======================
-// LOADER
-// =======================
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
@@ -29,39 +25,69 @@ export const loader = async ({ request }) => {
   return { getData };
 };
 
-// =======================
-// ACTION (DELETE)
-// =======================
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
-
   const formData = await request.formData();
+
+  const mode = formData.get("_mode");
   const id = formData.get("id");
 
-  if (!id) {
-    return { success: false, error: "Missing metaobject ID" };
+  // DELETE
+  if (mode === "delete") {
+    const res = await admin.graphql(
+      `#graphql
+        mutation MetaobjectDelete($id: ID!) {
+          metaobjectDelete(id: $id) {
+            deletedId
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      { variables: { id } }
+    );
+    return await res.json();
   }
 
-  const deleteResponse = await admin.graphql(
-    `#graphql
-      mutation MetaobjectDelete($id: ID!) {
-        metaobjectDelete(id: $id) {
-          deletedId
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-    {
-      variables: { id },
-    }
-  );
+  // UPDATE (FIXED VERSION)
+  if (mode === "update") {
+    const name = formData.get("name");
+    const value = formData.get("value");
 
-  const result = await deleteResponse.json();
-  return { success: true, result };
+    const res = await admin.graphql(
+      `#graphql
+        mutation UpdateMetaobject(
+          $id: ID!
+          $fields: [MetaobjectFieldInput!]!
+        ) {
+          metaobjectUpdate(id: $id, metaobject: { fields: $fields }) {
+            metaobject {
+              id
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        variables: {
+          id,
+          fields: [
+            { key: "name", value: name },
+            { key: "value", value: value },
+          ],
+        },
+      }
+    );
+
+    return await res.json();
+  }
+
+  return { error: "Unknown mode" };
 };
+
 
 export default function AppViewTable() {
   return <ViewTable />;
