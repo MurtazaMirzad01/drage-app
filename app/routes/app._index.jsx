@@ -25,8 +25,8 @@ export const loader = async ({ request }) => {
     {
       variables: {
         definition: {
-          name: "MyBundle1",
-          type: "MyBundle1",
+          name: "custom_product",
+          type: "custom_product",
           fieldDefinitions: [
             { name: "name", key: "name", type: "single_line_text_field" },
             { name: "data", key: "data", type: "json" },
@@ -79,9 +79,9 @@ export const loader = async ({ request }) => {
       {
         variables: {
           definition: {
-            name: "Bundle1",
+            name: "custom_product",
             namespace: "custom",
-            key: "bundle1",
+            key: "custom_product",
             description: "bundle metaobject related",
             type: "metaobject_reference",
             ownerType: "PRODUCT",
@@ -151,7 +151,7 @@ export const action = async ({ request }) => {
       `#graphql
       mutation {
         metaobjectCreate(metaobject: {
-          type: "MyBundle1",
+          type: "custom_product",
           fields: [
             ${fieldsArr.map((f) => `{ key: "${f.key}", value: """${f.value}""" }`).join(",\n")}
           ]
@@ -201,7 +201,7 @@ export const action = async ({ request }) => {
         variables: {
           metafields: [
             {
-              key: "bundle1",
+              key: "custom_product",
               namespace: "custom",
               ownerId: productIds,
               type: "metaobject_reference",
