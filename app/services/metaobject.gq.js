@@ -51,8 +51,7 @@ export const createMetaobjectDefinition = async ({ admin }) => {
     }
   );
 
-  const json = await response.json();
-  return json.data;
+  return response.data;
 };
 
 export const createMetaobject = async ({ admin }, { name, value, data }) => {

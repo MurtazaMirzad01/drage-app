@@ -1,7 +1,14 @@
-export const createMetafieldDefinition = async ({ admin }, metaobjectDefinitionId) => {
-  const response = await admin.graphql(
-    `#graphql
-      mutation CreateMetafieldDefinition($definition: MetafieldDefinitionInput!) {
+export const createMetafieldDefinition = async ({
+  admin: { graphql },
+  metaobjectDefinitionId,
+  ownerType,
+}) => {
+  const response = await graphql(
+    `
+      #graphql
+      mutation CreateBundleOfferMetafieldDefinition(
+        $definition: MetafieldDefinitionInput!
+      ) {
         metafieldDefinitionCreate(definition: $definition) {
           createdDefinition {
             id
@@ -20,41 +27,26 @@ export const createMetafieldDefinition = async ({ admin }, metaobjectDefinitionI
     {
       variables: {
         definition: {
-          name: "Custom Product",
+          name: "custom_product",
           namespace: "custom",
           key: "custom_product",
-          description: "Metaobject reference for product",
+          description: "bundle metaobject related",
           type: "metaobject_reference",
-          ownerType: "PRODUCT",
+          ownerType: ownerType,
           validations: [
             {
               name: "metaobject_definition_id",
-              value: JSON.stringify({
-                metaobject_definition_id: metaobjectDefinitionId // replace with actual definition GID
-              }),
+              value: metaobjectDefinitionId,
             },
           ],
         },
       },
-    }
+    },
   );
 
-  const json = await response.json();
-
-  // Check for errors
-  if (
-    json?.data?.metafieldDefinitionCreate?.userErrors &&
-    json.data.metafieldDefinitionCreate.userErrors.length > 0
-  ) {
-    console.error(
-      "Metafield creation errors:",
-      json.data.metafieldDefinitionCreate.userErrors
-    );
-    return null;
-  }
-
-  return json.data;
+  return response.data;
 };
+
 
 
 

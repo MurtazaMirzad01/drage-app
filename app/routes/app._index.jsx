@@ -8,18 +8,32 @@ export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
   const {
-    data: { metaobjectDefinition },
+    data: { metaobjectDefinitionByType },
   } = await getMetaobjectDefinition({ admin });
-  if (!metaobjectDefinition) {
+
+  if (!metaobjectDefinitionByType) {
     const {
-      data: { metaobjectDefinitionCreate: { metaobjectDefinition }, },
+      data: {
+        metaobjectDefinitionCreate: { metaobjectDefinition },
+      },
     } = await createMetaobjectDefinition({ admin });
+
     if (metaobjectDefinition) {
-      await createMetafieldDefinition({ admin, metaobjectDefinitionId: metaobjectDefinition.id });
-      await createMetafieldDefinition({ admin, metaobjectDefinitionId: metaobjectDefinition.id, ownerType: "PRODUCT" });
+      await createMetafieldDefinition({
+        admin,
+        metaobjectDefinitionId: metaobjectDefinition.id,
+      });
+
+      await createMetafieldDefinition({
+        admin,
+        metaobjectDefinitionId: metaobjectDefinition.id,
+        ownerType: "PRODUCT",
+      });
     }
   }
 };
+
+
 export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
