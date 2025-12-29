@@ -1,6 +1,6 @@
 import { useLoaderData, useFetcher } from "react-router";
 import { useState, useEffect } from "react";
-
+import EditAppView from "./EditAppView.jsx";
 export default function ViewTable() {
   const loaderData = useLoaderData();
   const fetcher = useFetcher();
@@ -54,12 +54,7 @@ export default function ViewTable() {
               <s-table-cell>{item.value}</s-table-cell>
               <s-table-cell style={{ display: "flex", gap: "8px" }}>
                 {/* EDIT BUTTON */}
-                <s-button
-                  variant="primary"
-                  onClick={() => setEditing(item)}
-                >
-                  Edit
-                </s-button>
+                <EditAppView />
 
                 {/* DELETE BUTTON */}
                 <fetcher.Form method="post">
