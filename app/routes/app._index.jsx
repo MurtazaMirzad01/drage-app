@@ -1,36 +1,113 @@
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import AppView from "../components/AppView.jsx";
-import { getMetaobjectDefinition, createMetaobjectDefinition, createMetaobject, updateMetaobject, deleteMetaobject } from "../services/metaobject.gq.js";
-import { createMetafieldDefinition, getMetafieldDefinitions, setMetafields } from "../services/metafield.gq.js";
+
 
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
-
-  const {
-    data: { metaobjectDefinitionByType },
-  } = await getMetaobjectDefinition({ admin });
-
-  if (!metaobjectDefinitionByType) {
-    const {
-      data: {
-        metaobjectDefinitionCreate: { metaobjectDefinition },
+  const response = await admin.graphql(
+    `#graphql
+      mutation CreateBundleMetaobjectDefinition($definition: MetaobjectDefinitionCreateInput!) {
+        metaobjectDefinitionCreate(definition: $definition) {
+          metaobjectDefinition {
+            id
+            name
+            type
+          }
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }
+    `,
+    {
+      variables: {
+        definition: {
+          name: "MyBundle1",
+          type: "MyBundle1",
+          fieldDefinitions: [
+            { name: "name", key: "name", type: "single_line_text_field" },
+            { name: "data", key: "data", type: "json" },
+            { name: "value", key: "value", type: "single_line_text_field" },
+          ],
+        },
       },
-    } = await createMetaobjectDefinition({ admin });
+    },
+  );
 
-    if (metaobjectDefinition) {
-      await createMetafieldDefinition({
-        admin,
-        metaobjectDefinitionId: metaobjectDefinition.id,
-      });
+  const data = await response.json();
+  const payload = data?.data?.metaobjectDefinitionCreate;
+  const userErrors = payload?.userErrors ?? [];
 
-      await createMetafieldDefinition({
-        admin,
-        metaobjectDefinitionId: metaobjectDefinition.id,
-        ownerType: "PRODUCT",
-      });
+  if (userErrors.length > 0) {
+    const alreadyExists = userErrors.some((e) => e.code === "ALREADY_EXISTS");
+
+    if (!alreadyExists) {
+      return { errors: userErrors };
     }
   }
+
+  const metaobjectDefinition = payload?.metaobjectDefinition ?? null;
+  const metaobjectDefinitionId = metaobjectDefinition?.id;
+
+  let metafieldDefinition = null;
+  let metafieldErrors = [];
+
+  if (metaobjectDefinitionId) {
+    const metafieldResponse = await admin.graphql(
+      `#graphql
+    mutation CreateBundleOfferMetafieldDefinition(
+      $definition: MetafieldDefinitionInput!
+    ) {
+      metafieldDefinitionCreate(definition: $definition) {
+        createdDefinition {
+          id
+          name
+          namespace
+          key
+        }
+        userErrors {
+          field
+          message
+          code
+        }
+      }
+    }
+   `,
+      {
+        variables: {
+          definition: {
+            name: "Bundle1",
+            namespace: "custom",
+            key: "bundle1",
+            description: "bundle metaobject related",
+            type: "metaobject_reference",
+            ownerType: "PRODUCT",
+
+            validations: [
+              {
+                name: "metaobject_definition_id",
+                value: metaobjectDefinitionId,
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    const metafieldJson = await metafieldResponse.json();
+    const metafieldPayload =
+      metafieldJson?.data?.metafieldDefinitionCreate ?? null;
+    metafieldErrors = metafieldPayload?.userErrors ?? [];
+    metafieldDefinition = metafieldPayload?.createdDefinition ?? null;
+  }
+
+  return {
+    metafieldDefinition,
+    metafieldErrors,
+  };
 };
 
 
@@ -38,43 +115,116 @@ export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
 
+  // Form data extraction
   const name = formData.get("name");
+  const data = JSON.parse(formData.get("product"));
+  const actionType = formData.get("actionType");
   const value = formData.get("value");
-  const products = (formData.get("product"));
   const metaobjectId = formData.get("metaobjectId");
+  const productID =
+    data && data.length > 0
+      ? data.map((product) => product.id)
+      : [];
+  const productIds = productID[0];
+  console.log("hhhhhhhhhhhhhhhhhhhhhhhhhh");
+  console.log("Product IDs:", productIds);
+  console.log("hhhhhhhhhhhhhhhhhhhhhhhhhh");
 
-  console.log("Action received data:", { name, value, products, metaobjectId });
+  console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
-  // Create the metaobject
-  const createdMetaobjectResponse = await createMetaobject(
-    { admin },
-    { name, value, data: { products } }
-  );
+  console.log(name);
+  console.log(data);
+  console.log(actionType);
+  console.log(value);
 
-  const createdMetaobject = createdMetaobjectResponse?.metaobjectCreate?.metaobject;
+  console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
-  if (!createdMetaobject) {
-    console.error("Failed to create metaobject");
-    return null;
-  }
+  const fieldsArr = [
+    { key: "name", value: name },
+    { key: "data", value: JSON.stringify(data) },
+    { key: "value", value: value },
+  ].filter((f) => f.value !== undefined && f.value !== null);
 
-  console.log("Created Metaobject:", createdMetaobject);
-
-  // Set metafields for each product
-  for (const product of products) {
-    const setMetafieldResponse = await setMetafields(
-      { admin },
-      product.id,
-      createdMetaobject.id
+  // CREATE: Create a new metaobject
+  if (actionType === "create") {
+    const createResponse = await admin.graphql(
+      `#graphql
+      mutation {
+        metaobjectCreate(metaobject: {
+          type: "MyBundle1",
+          fields: [
+            ${fieldsArr.map((f) => `{ key: "${f.key}", value: """${f.value}""" }`).join(",\n")}
+          ]
+        }) {
+          metaobject {
+            id
+            type
+            fields { key value }
+          }
+          userErrors { field message code }
+        }
+      }`,
     );
 
-    console.log(
-      `Set metafield for product ${product.id}:`,
-      setMetafieldResponse
+    const createData = await createResponse.json();
+    const createPayload = createData.data.metaobjectCreate;
+    const metaobject = createPayload.metaobject;
+    const bundleMetaobjectId = metaobject.id;
+    console.log("lllllllllllllllllllllllllllllll");
+    console.log(bundleMetaobjectId);
+    console.log("lllllllllllllllllllllllllllllll");
+
+    if (createData.data.metaobjectCreate.userErrors.length > 0) {
+      return { errors: createData.data.metaobjectCreate.userErrors };
+    }
+
+    const response = await admin.graphql(
+      `#graphql
+      mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields {
+            key
+            namespace
+            value
+            createdAt
+            updatedAt
+          }
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }
+      `,
+      {
+        variables: {
+          metafields: [
+            {
+              key: "bundle1",
+              namespace: "custom",
+              ownerId: productIds,
+              type: "metaobject_reference",
+              value: bundleMetaobjectId,
+            },
+          ],
+        },
+      },
     );
+
+    const Metadata = await response.json();
+    const payload = Metadata?.data?.metafieldsSet;
+    const metafields = payload?.metafields ?? [];
+    const userErrors = payload?.userErrors ?? [];
+
+    if (userErrors.length > 0) {
+      return { errors: userErrors };
+    }
+
+    return { metafields, metaobject: metaobject };
   }
 
-  return null;
+  return { error: "Invalid action type or missing metaobjectId" };
 };
 
 export default function Index() {
