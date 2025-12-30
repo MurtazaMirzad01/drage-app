@@ -14,6 +14,7 @@ export default function ViewTable() {
     const nameField = node.fields.find((f) => f.key === "name");
     const valueField = node.fields.find((f) => f.key === "value");
 
+
     return {
       id: node.id,
       name: nameField?.value || "",
@@ -54,7 +55,7 @@ export default function ViewTable() {
               <s-table-cell>{item.value}</s-table-cell>
               <s-table-cell style={{ display: "flex", gap: "8px" }}>
                 {/* EDIT BUTTON */}
-                <EditAppView />
+                <EditAppView id={item.id} />
 
                 {/* DELETE BUTTON */}
                 <fetcher.Form method="post">

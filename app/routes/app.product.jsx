@@ -31,6 +31,7 @@ export const action = async ({ request }) => {
 
   const mode = formData.get("_mode");
   const id = formData.get("id");
+  const actionType = formData.get("actionType");
 
   // DELETE
   if (mode === "delete") {
@@ -51,9 +52,10 @@ export const action = async ({ request }) => {
   }
 
   // UPDATE (FIXED VERSION)
-  if (mode === "update") {
+  if (actionType === "update") {
     const name = formData.get("name");
     const value = formData.get("value");
+    const product = formData.get("product");
 
     const res = await admin.graphql(
       `#graphql
@@ -77,6 +79,8 @@ export const action = async ({ request }) => {
           fields: [
             { key: "name", value: name },
             { key: "value", value: value },
+            { key: "data", value: product },
+
           ],
         },
       }

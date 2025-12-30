@@ -1,11 +1,12 @@
 import { Form, useFetcher, useLoaderData } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 
-export default function EditAppView() {
+export default function EditAppView({ id }) {
+
   const fetcher = useFetcher();
   const loaderData = useLoaderData();
-  console.log("Loader Data:", loaderData);
+
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [products, setProducts] = useState([]);
@@ -16,15 +17,45 @@ export default function EditAppView() {
   console.log("Existing Products:", existingBundles);
   console.log("Has Products:", hasProducts);
   console.log("===========================================");
+
+  useEffect(() => {
+    const metaobjects =
+      loaderData?.getData?.data?.metaobjects?.edges || [];
+
+    const data = metaobjects.map(({ node }) => {
+      const nameField = node.fields.find((f) => f.key === "name");
+      const valueField = node.fields.find((f) => f.key === "value");
+      const productField = node.fields.find((f) => f.key === "data");
+      console.log("===================================");
+      console.log("EditAppView ID:", id);
+      console.log("===================================");
+
+      return {
+        id: node.id,
+        name: nameField?.value || "",
+        value: valueField?.value || "",
+        products: productField?.value ? JSON.parse(productField.value) : [],
+      };
+    });
+    setName(data[0]?.name || "");
+    setValue(data[0]?.value || "");
+    setProducts(data[0]?.products || []);
+  }, [loaderData]);
+  console.log("===========================================================================");
+  console.log("loaderData: ", loaderData);
+  console.log("===========================================================================");
+
+
   function handleSubmit(event) {
     event.preventDefault();
 
     fetcher.submit(
       {
-        name,
-        value,
+        name: name,
+        value: value,
         product: JSON.stringify(products),
-        actionType: "create",
+        id: id,
+        actionType: "update",
       },
       { method: "post" }
     );
@@ -36,9 +67,7 @@ export default function EditAppView() {
   }
 
 
-  function handleDiscard() {
-    console.log("Form reset");
-  }
+
   async function handleProductBrowse() {
     const selected = await shopify.resourcePicker({
       multiple: true,
@@ -131,22 +160,20 @@ export default function EditAppView() {
           )}
 
         </s-stack>
+
+        <s-button slot="secondary-actions" commandFor="modal" command="--hide">
+          Close
+        </s-button>
         <s-button
-          slot="secondary-actions"
+          slot="primary-action"
+          variant="primary"
           commandFor="modal"
           command="--hide"
-
+          onClick={handleSubmit}
         >
-          Cancel
+          Save
         </s-button>
 
-        <s-button
-
-          commandFor="modal"
-          command="--hide"
-        >
-          save
-        </s-button>
       </s-modal>
     </>
   );
