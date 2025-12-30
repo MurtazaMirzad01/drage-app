@@ -29,12 +29,11 @@ export const action = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
   const formData = await request.formData();
 
-  const mode = formData.get("_mode");
   const id = formData.get("id");
   const actionType = formData.get("actionType");
 
   // DELETE
-  if (mode === "delete") {
+  if (actionType === "delete") {
     const res = await admin.graphql(
       `#graphql
         mutation MetaobjectDelete($id: ID!) {

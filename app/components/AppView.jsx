@@ -125,36 +125,6 @@ export default function AppView() {
 
           </s-stack>
         </Form>
-        {hasProducts && (
-          <s-section>
-            <s-table>
-              <s-table-header-row>
-                <s-table-header>Name</s-table-header>
-                <s-table-header>Value</s-table-header>
-                <s-table-header>Actions</s-table-header>
-              </s-table-header-row>
-              <s-table-body>
-                {existingBundles.map((product) => (
-                  <s-table-row key={product.id}>
-                    <s-table-cell>{product.name}</s-table-cell>
-                    <s-table-cell>{product.value}</s-table-cell>
-                    <s-table-cell>
-                      <s-button
-                        variant="destructive"
-                        onClick={() => {
-                          // Handle delete action
-                        }}
-                      >
-                        Delete
-                      </s-button>
-                    </s-table-cell>
-                  </s-table-row>
-                ))}
-              </s-table-body>
-            </s-table>
-          </s-section>
-        )}
-
       </s-section>
     </s-page>
   );

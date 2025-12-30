@@ -1,6 +1,7 @@
 import { useLoaderData, useFetcher } from "react-router";
 import { useState, useEffect } from "react";
 import EditAppView from "./EditAppView.jsx";
+import DeleteAppView from "./DeleteAppView.jsx";
 export default function ViewTable() {
   const loaderData = useLoaderData();
   const fetcher = useFetcher();
@@ -58,66 +59,13 @@ export default function ViewTable() {
                 <EditAppView id={item.id} />
 
                 {/* DELETE BUTTON */}
-                <fetcher.Form method="post">
-                  <input type="hidden" name="_mode" value="delete" />
-                  <input type="hidden" name="id" value={item.id} />
-                  <s-button type="submit" variant="destructive">
-                    Delete
-                  </s-button>
-                </fetcher.Form>
+                <DeleteAppView id={item.id} />
               </s-table-cell>
             </s-table-row>
           ))}
         </s-table-body>
       </s-table>
 
-      {/* ===========================
-            EDIT MODAL
-          =========================== */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-md w-[400px] shadow-md">
-            <h3 style={{ marginBottom: "12px" }}>Edit Bundle</h3>
-
-            <fetcher.Form method="post">
-              <input type="hidden" name="_mode" value="update" />
-              <input type="hidden" name="id" value={editing.id} />
-
-              <label>Name</label>
-              <input
-                type="text"
-                name="name"
-                defaultValue={editing.name}
-                className="input"
-              />
-
-              <label style={{ marginTop: "10px" }}>Value</label>
-              <input
-                type="text"
-                name="value"
-                defaultValue={editing.value}
-                className="input"
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  marginTop: "20px",
-                  justifyContent: "space-between",
-                }}
-              >
-                <s-button variant="secondary" onClick={() => setEditing(null)}>
-                  Cancel
-                </s-button>
-
-                <s-button type="submit" variant="primary" onClick={() => setEditing(null)}>
-                  Save
-                </s-button>
-              </div>
-            </fetcher.Form>
-          </div>
-        </div>
-      )}
     </s-section>
   );
 }
