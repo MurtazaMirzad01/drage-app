@@ -1,9 +1,7 @@
 import { Form, useFetcher, useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 
-
-export default function EditAppView({ id }) {
-
+export default function EditAppView({ id, modalId }) { // Accept modalId prop
   const fetcher = useFetcher();
   const loaderData = useLoaderData();
 
@@ -11,40 +9,23 @@ export default function EditAppView({ id }) {
   const [value, setValue] = useState("");
   const [products, setProducts] = useState([]);
 
-  const existingBundles = loaderData?.data || [];
-  const hasProducts = existingBundles.length > 0;
-  console.log("===========================================");
-  console.log("Existing Products:", existingBundles);
-  console.log("Has Products:", hasProducts);
-  console.log("===========================================");
-
   useEffect(() => {
-    const metaobjects =
-      loaderData?.getData?.data?.metaobjects?.edges || [];
+    const metaobjects = loaderData?.getData?.data?.metaobjects?.edges || [];
 
-    const data = metaobjects.map(({ node }) => {
+    // Find the specific item by ID
+    const foundItem = metaobjects.find(({ node }) => node.id === id);
+
+    if (foundItem) {
+      const node = foundItem.node;
       const nameField = node.fields.find((f) => f.key === "name");
       const valueField = node.fields.find((f) => f.key === "value");
       const productField = node.fields.find((f) => f.key === "data");
-      console.log("===================================");
-      console.log("EditAppView ID:", id);
-      console.log("===================================");
 
-      return {
-        id: node.id,
-        name: nameField?.value || "",
-        value: valueField?.value || "",
-        products: productField?.value ? JSON.parse(productField.value) : [],
-      };
-    });
-    setName(data[0]?.name || "");
-    setValue(data[0]?.value || "");
-    setProducts(data[0]?.products || []);
-  }, [loaderData]);
-  console.log("===========================================================================");
-  console.log("loaderData: ", loaderData);
-  console.log("===========================================================================");
-
+      setName(nameField?.value || "");
+      setValue(valueField?.value || "");
+      setProducts(productField?.value ? JSON.parse(productField.value) : []);
+    }
+  }, [loaderData, id]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -66,17 +47,11 @@ export default function EditAppView({ id }) {
     setProducts([]);
   }
 
-
-
   async function handleProductBrowse() {
     const selected = await shopify.resourcePicker({
       multiple: true,
       type: "product"
     });
-
-    console.log("-----------------------");
-    console.log(selected);
-    console.log("-----------------------");
 
     setProducts(prevProducts => {
       const existingIds = new Set(prevProducts.map(p => p.id));
@@ -86,6 +61,7 @@ export default function EditAppView({ id }) {
       return [...prevProducts, ...newProducts];
     });
   }
+
   function handleRemoveProductFromCard(productId) {
     setProducts(prevProducts =>
       prevProducts.filter(product => product.id !== productId)
@@ -96,16 +72,15 @@ export default function EditAppView({ id }) {
     <>
       <s-button
         icon="edit"
-        commandFor="modal"
+        commandFor={modalId} // Use the unique modal ID
         command="--show"
       >
-
       </s-button>
 
       <s-modal
-        id="modal"
+        id={modalId} // Use the unique modal ID
       >
-
+        {/* Modal content remains the same */}
         <s-stack gap="base">
           <s-query-container>
             <s-grid gridTemplateColumns="@container (inline-size > 500px) 1fr 1fr, 1fr" gap="base">
@@ -114,27 +89,28 @@ export default function EditAppView({ id }) {
                   label="Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                />                </s-grid-item>
+                />
+              </s-grid-item>
               <s-grid-item>
                 <s-text-field
                   label="Value"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                />                </s-grid-item>
+                />
+              </s-grid-item>
             </s-grid>
           </s-query-container>
+
           <s-stack gap="base" direction="inline" align="center">
             <s-text>Please select a product: </s-text>
-            <s-button onClick={handleProductBrowse} >Browse</s-button>
+            <s-button onClick={handleProductBrowse}>Browse</s-button>
           </s-stack>
+
           {products.length > 0 && (
-            <s-stack
-              gap="small-300"
-              padding="small-300"
-            >
+            <s-stack gap="small-300" padding="small-300">
               {products.map((product) => (
                 <s-stack key={product.id} direction="inline" gap="base" border="base" borderStyle="dotted" padding="small-300" justifyContent="space-between">
-                  <s-stack direction="inline" gap="base" >
+                  <s-stack direction="inline" gap="base">
                     <s-box inlineSize="50px" blockSize="50px">
                       <s-image
                         src={product.images?.[0]?.originalSrc || ''}
@@ -151,29 +127,26 @@ export default function EditAppView({ id }) {
                     <s-icon
                       type="x"
                       onClick={() => handleRemoveProductFromCard(product.id)}
-                    >
-                    </s-icon>
+                    ></s-icon>
                   </s-stack>
                 </s-stack>
               ))}
             </s-stack>
           )}
-
         </s-stack>
 
-        <s-button slot="secondary-actions" commandFor="modal" command="--hide">
+        <s-button slot="secondary-actions" commandFor={modalId} command="--hide">
           Close
         </s-button>
         <s-button
           slot="primary-action"
           variant="primary"
-          commandFor="modal"
+          commandFor={modalId}
           command="--hide"
           onClick={handleSubmit}
         >
           Save
         </s-button>
-
       </s-modal>
     </>
   );

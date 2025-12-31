@@ -1,20 +1,16 @@
 import { useLoaderData, useFetcher } from "react-router";
-import { useState, useEffect } from "react";
-import EditAppView from "./EditAppView.jsx";
-import DeleteAppView from "./DeleteAppView.jsx";
+import { useEffect } from "react";
+import EditAppView from "./EditAppView";
+import DeleteAppView from "./DeleteAppView";
 export default function ViewTable() {
   const loaderData = useLoaderData();
   const fetcher = useFetcher();
 
-  const [editing, setEditing] = useState(null); // stores item being edited
-
-  const metaobjects =
-    loaderData?.getData?.data?.metaobjects?.edges || [];
+  const metaobjects = loaderData?.getData?.data?.metaobjects?.edges || [];
 
   const data = metaobjects.map(({ node }) => {
     const nameField = node.fields.find((f) => f.key === "name");
     const valueField = node.fields.find((f) => f.key === "value");
-
 
     return {
       id: node.id,
@@ -26,19 +22,11 @@ export default function ViewTable() {
   // refresh on mutation complete
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data) {
-      // Update success
-      if (fetcher.data.metaobjectUpdate) {
-        setEditing(null);
-        window.location.reload();
-      }
-
-      // Delete success
-      if (fetcher.data.metaobjectDelete) {
+      if (fetcher.data.metaobjectUpdate || fetcher.data.metaobjectDelete) {
         window.location.reload();
       }
     }
   }, [fetcher.state, fetcher.data]);
-
 
   return (
     <s-section>
@@ -55,17 +43,22 @@ export default function ViewTable() {
               <s-table-cell>{item.name}</s-table-cell>
               <s-table-cell>{item.value}</s-table-cell>
               <s-table-cell style={{ display: "flex", gap: "8px" }}>
-                {/* EDIT BUTTON */}
-                <EditAppView id={item.id} />
+                {/* EDIT BUTTON - Pass unique modal ID */}
+                <EditAppView
+                  id={item.id}
+                  modalId={`edit-modal-${item.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
+                />
 
-                {/* DELETE BUTTON */}
-                <DeleteAppView id={item.id} />
+                {/* DELETE BUTTON - Pass unique modal ID */}
+                <DeleteAppView
+                  id={item.id}
+                  modalId={`delete-modal-${item.id.replace(/[^a-zA-Z0-9]/g, '-')}`}
+                />
               </s-table-cell>
             </s-table-row>
           ))}
         </s-table-body>
       </s-table>
-
     </s-section>
   );
 }
